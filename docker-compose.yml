@@ -1,0 +1,30 @@
+# Local dependencies for the reservation-service prototype.
+# Copy .env.example to .env before running: docker compose up -d
+services:
+  redis:
+    image: redis:7.4-alpine
+    command: ["redis-server", "--save", "", "--appendonly", "no", "--maxclients", "20000"]
+    ports:
+      - "127.0.0.1:6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 2s
+      timeout: 2s
+      retries: 30
+
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-flashsale}
+      POSTGRES_USER: ${POSTGRES_USER:-flashsale}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env (see .env.example)}
+    command: ["postgres", "-c", "max_connections=500", "-c", "synchronous_commit=on"]
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - ./reservation-service/migrations:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-flashsale} -d ${POSTGRES_DB:-flashsale}"]
+      interval: 2s
+      timeout: 2s
+      retries: 30
